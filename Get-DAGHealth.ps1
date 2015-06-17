@@ -176,7 +176,7 @@ $string69 = "DAG databases to check"
 #This function is used to generate HTML for the DAG member health report
 Function New-DAGMemberHTMLTableCell()
 {
-	param( $lineitem, [REF]$monitoring_status_array )
+	param( $lineitem )
 
 	$htmltablecell = $null
 
@@ -1017,6 +1017,8 @@ if ($($dags.count) -gt 0)
 			#Begin Member table HTML rows
 			foreach ($line in $dagmemberReport)
 			{
+                $htmltablerow_monitor = ""
+                $htmltablerow_tmp = @()
 				$htmltablerow = "<tr>"
 				$htmltablerow += "<td><strong>$($line."Server")</strong></td>"
 				$htmltablerow += (New-DAGMemberHTMLTableCell "ClusterService")
@@ -1026,26 +1028,32 @@ if ($($dags.count) -gt 0)
 				$htmltablerow += (New-DAGMemberHTMLTableCell "TCPListener")
 				$htmltablerow += (New-DAGMemberHTMLTableCell "ServerLocatorService")
 				$htmltablerow += (New-DAGMemberHTMLTableCell "DAGMembersUp")
+                $htmltablerow_monitor += $htmltablerow
 				$htmltablerow += (New-DAGMemberHTMLTableCell "ClusterNetwork")
 				$htmltablerow += (New-DAGMemberHTMLTableCell "QuorumGroup")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "FileShareQuorum")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "DatabaseRedundancy")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "DatabaseAvailability")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "DBCopySuspended")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "DBCopyFailed")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "DBInitializing")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "DBDisconnected")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "DBLogCopyKeepingUp")
-				$htmltablerow += (New-DAGMemberHTMLTableCell "DBLogReplayKeepingUp")
 
-                if ($htmltablerow -match "[^*]fail")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "FileShareQuorum")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "DatabaseRedundancy")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "DatabaseAvailability")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "DBCopySuspended")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "DBCopyFailed")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "DBInitializing")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "DBDisconnected")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "DBLogCopyKeepingUp")
+				$htmltablerow_tmp += (New-DAGMemberHTMLTableCell "DBLogReplayKeepingUp")
+                $htmltablerow_monitor += $htmltablerow_tmp
+
+                $htmltablerow += $htmltablerow_tmp
+
+                if ($htmltablerow_monitor -match "[^*]fail")
                 {
-                    $monitoring_criticals += "Alert for Member Health"
+                    $monitoring_criticals += "Member Health"
                 }
-                elseif ($htmltablerow -match "warn")
+                elseif ($htmltablerow_monitor -match "warn")
                 {
-                    $monitoring_warnings += "Warning for Member Health"
+                    $monitoring_warnings += "Member Health"
                 }
+
 
 				$htmltablerow += "</tr>"
 				$dagmemberHtml += $htmltablerow
@@ -1181,10 +1189,11 @@ if ($Monitoring)
         $status = "WARN - DAGs could not be checked!"
         $status_code = 1
     }
-    elseif ($alerts -or $monitoring_criticals.Length)
+    elseif ($monitoring_criticals.Length)
     {
         $status = "CRIT - "
         $monitoring_report = $monitoring_criticals -join ', '
+        $monitoring_report += "; alerts: $alerts"
         $status_code = 2
     }
     elseif ($monitoring_warnings.Length)
@@ -1199,7 +1208,8 @@ if ($Monitoring)
         $monitoring_report = $monitoring_unknown -join ', '
         $status_code = 3
     }
-    elseif (!$alerts -and $dagavailable)
+    ## !$alerts -and
+    elseif ($dagavailable)
     {
         $status = "OK - No alerts."
         $status_code = 0
